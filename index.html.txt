@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <title>Învățarea Notelor Muzicale</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #f0f4f8;
+    }
+    h1 {
+      color: #333;
+    }
+    #noteCanvas {
+      border: 2px solid #333;
+      margin: 20px auto;
+      display: block;
+      background: white;
+    }
+    .options {
+      margin-top: 20px;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      font-size: 18px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      background: #4caf50;
+      color: white;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    #score, #level {
+      margin-top: 15px;
+      font-size: 20px;
+    }
+    #progress-container {
+      margin: 20px auto;
+      width: 80%;
+      height: 25px;
+      background: #ddd;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    #progress-bar {
+      height: 100%;
+      width: 0%;
+      background: #4caf50;
+      transition: width 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎵 Învățarea Notelor Muzicale 🎵</h1>
+  <canvas id="noteCanvas" width="400" height="200"></canvas>
+  <div class="options" id="options"></div>
+  <button onclick="playNote()">🔊 Redă nota</button>
+  <button onclick="soundRound()">🎶 Exercițiu invers (ghicește după sunet)</button>
+  <div id="score">Scor: 0</div>
+  <div id="level">Nivel: 1</div>
+  <div id="progress-container"><div id="progress-bar"></div></div>
+
+  <script>
+    const canvas = document.getElementById('noteCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const baseNotes = ["Do", "Re", "Mi", "Fa", "Sol", "La", "Si"];
+
+    const positions = {
+      "Do": 150, "Re": 140, "Mi": 130, "Fa": 120, "Sol": 110,
+      "La": 100, "Si": 90, "Do2": 80, "Re2": 70, "Mi2": 60
+    };
+
+    const frequencies = {
+      "Do": 261.63, "Re": 293.66, "Mi": 329.63, "Fa": 349.23,
+      "Sol": 392.00, "La": 440.00, "Si": 493.88,
+      "Do2": 523.25, "Re2": 587.33, "Mi2": 659.25
+    };
+
+    let availableNotes = [...baseNotes];
+    let currentNote = null;
+    let score = 0, level = 1, soundMode = false, progress = 0;
+
+    function drawStaff() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = "black";
+      for (let i = 0; i < 5; i++) {
+        ctx.beginPath();
+        ctx.moveTo(20, 60 + i * 20);
+        ctx.lineTo(380, 60 + i * 20);
+        ctx.stroke();
+      }
+    }
+
+    function drawNote(note) {
+      drawStaff();
+      if (positions[note]) {
+        ctx.beginPath();
+        ctx.arc(200, positions[note], 10, 0, 2 * Math.PI);
+        ctx.fillStyle = "black";
+        ctx.fill();
+      }
+    }
+
+    function newRound() {
+      soundMode = false;
+      currentNote = availableNotes[Math.floor(Math.random() * availableNotes.length)];
+      drawNote(currentNote);
+      generateOptions();
+    }
+
+    function soundRound() {
+      soundMode = true;
+      currentNote = availableNotes[Math.floor(Math.random() * availableNotes.length)];
+      drawStaff();
+      generateOptions();
+      playNote();
+    }
+
+    function generateOptions() {
+      const optionsDiv = document.getElementById('options');
+      optionsDiv.innerHTML = '';
+      let shuffled = [...availableNotes].sort(() => 0.5 - Math.random()).slice(0, 3);
+      if (!shuffled.includes(currentNote)) {
+        shuffled[Math.floor(Math.random() * 3)] = currentNote;
+      }
+      shuffled.forEach(note => {
+        const btn = document.createElement('button');
+        btn.textContent = note;
+        btn.onclick = () => checkAnswer(note);
+        optionsDiv.appendChild(btn);
+      });
+    }
+
+    function checkAnswer(note) {
+      if (note === currentNote) {
+        score++;
+        progress++;
+        alert("Corect! 🎉");
+      } else {
+        alert("Greșit! Răspunsul era " + currentNote);
+      }
+      document.getElementById('score').textContent = "Scor: " + score;
+      updateProgress();
+      if (soundMode) {
+        soundRound();
+      } else {
+        newRound();
+      }
+    }
+
+    function playNote() {
+      if (!currentNote) return;
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioCtx.createOscillator();
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(frequencies[currentNote], audioCtx.currentTime);
+      oscillator.connect(audioCtx.destination);
+      oscillator.start();
+      oscillator.stop(audioCtx.currentTime + 1);
+    }
+
+    function updateProgress() {
+      let percent = (progress % 5) * 20;
+      document.getElementById('progress-bar').style.width = percent + "%";
+      if (progress > 0 && progress % 5 === 0) {
+        level++;
+        document.getElementById('level').textContent = "Nivel: " + level;
+        document.getElementById('progress-bar').style.width = "0%";
+        if (level === 2) availableNotes.push("Do2");
+        if (level === 3) availableNotes.push("Re2");
+        if (level === 4) availableNotes.push("Mi2");
+      }
+    }
+
+    newRound();
+  </script>
+</body>
+</html>
